@@ -22,3 +22,23 @@ body {
 .animate-fade-up {
   animation: fade-up 0.6s ease-out;
 }
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.9; }
+}
+
+@keyframes skeletonShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Staggered fade-in for when real cards appear */
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.job-card-enter {
+  animation: cardFadeIn 0.35s ease-out forwards;
+}

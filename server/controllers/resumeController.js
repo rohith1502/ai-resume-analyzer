@@ -83,6 +83,8 @@ exports.analyze = async (req, res) => {
         analysisId: analysis._id,
         ...analysisResult,
         jobRecommendations,
+        jobRole,
+        company: company || '',
       },
     });
 
@@ -158,6 +160,27 @@ exports.deleteAnalysis = async (req, res) => {
     });
   } catch (err) {
     console.error('Delete error:', err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.getMoreJobs = async (req, res) => {
+  try {
+    const { jobTitle, page } = req.body;
+
+    if (!jobTitle) {
+      return res.status(400).json({ success: false, message: 'Job title is required' });
+    }
+
+    const pageNumber = page || 2;
+    const jobRecommendations = await fetchJobRecommendations(jobTitle, '', pageNumber);
+
+    return res.status(200).json({
+      success: true,
+      jobs: jobRecommendations,
+    });
+  } catch (err) {
+    console.error('Get more jobs error:', err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 };

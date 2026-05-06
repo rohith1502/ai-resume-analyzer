@@ -1,14 +1,70 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Check, X, ExternalLink, Rocket } from 'lucide-react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+import JobCardSkeleton from './JobCardSkeleton';
 
 const ResultsSection = ({ result, onAnalyzeAnother }) => {
   const resultsRef = useRef(null);
+  const seenJobKeys = useRef(new Set());
+  const [extraJobs, setExtraJobs] = useState([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [jobPage, setJobPage] = useState(2);
+  const [noMoreJobs, setNoMoreJobs] = useState(false);
+
+  const token = localStorage.getItem('token');
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/resume/more-jobs',
+        { jobTitle: result.jobRole, page: jobPage },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data.success) {
+        const newJobs = res.data.jobs || [];
+        
+        const freshJobs = newJobs.filter(job => {
+          const key = job.unique_key || `${job.company}-${job.role}`;
+          if (seenJobKeys.current.has(key)) return false;
+          seenJobKeys.current.add(key);
+          return true;
+        });
+        
+        if (freshJobs.length === 0) {
+          setNoMoreJobs(true);
+        } else {
+          setExtraJobs(prev => [...prev, ...freshJobs]);
+          setJobPage(prev => prev + 1);
+        }
+      }
+    } catch (err) {
+      toast.error('Failed to load more jobs');
+      console.error('Load more jobs error:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     if (resultsRef.current) {
       resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, []);
+
+  useEffect(() => {
+    if (result?.jobRecommendations?.length) {
+      seenJobKeys.current = new Set();
+      result.jobRecommendations.forEach(job => {
+        const key = job.unique_key || `${job.company}-${job.role}`;
+        seenJobKeys.current.add(key);
+      });
+      setExtraJobs([]);
+      setJobPage(2);
+      setNoMoreJobs(false);
+    }
+  }, [result]);
 
   const getScoreColor = (score) => {
     if (score >= 75) return { text: 'text-green-400', bg: 'bg-green-500', ring: 'ring-green-500' };
@@ -219,7 +275,95 @@ const ResultsSection = ({ result, onAnalyzeAnother }) => {
                 </div>
               );
             })}
+            {extraJobs.map((job, index) => {
+              const daysAgo = job.postedAt 
+                ? Math.floor((Date.now() - new Date(job.postedAt)) / 86400000) 
+                : null;
+              const postedLabel = daysAgo === 0 ? "Today" : daysAgo === 1 ? "Yesterday" : `${daysAgo} days ago`;
+
+              return (
+                <div
+                  key={`extra-${index}`}
+                  className="bg-[#0d1526] border border-violet-900/30 hover:border-violet-500/50 
+                          rounded-xl p-5 flex flex-col gap-3 hover:shadow-lg 
+                          hover:shadow-violet-900/20 transition-all job-card-enter"
+                >
+                  {/* Header: logo + company + posted date */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {job.employerLogo ? (
+                        <img src={job.employerLogo} alt={job.company} 
+                             className="w-8 h-8 rounded object-contain bg-white p-0.5" />
+                      ) : (
+                        <div className="w-8 h-8 rounded bg-violet-800 flex items-center justify-center 
+                                        text-white text-sm font-bold">
+                          {job.company[0]}
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-white font-semibold text-sm">{job.company}</p>
+                        <p className="text-violet-400 text-xs">{job.role}</p>
+                      </div>
+                    </div>
+                    {daysAgo !== null && (
+                      <span className="text-gray-600 text-xs">{postedLabel}</span>
+                    )}
+                  </div>
+
+                  {/* Location */}
+                  <p className="text-gray-400 text-sm">📍 {job.location}</p>
+
+                  {/* Match reason / description */}
+                  <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">
+                    {job.matchReason}
+                  </p>
+
+                  {/* Apply button */}
+                  <a href={job.applyUrl} target="_blank" rel="noopener noreferrer"
+                     className="mt-auto text-center bg-violet-600 hover:bg-violet-700 
+                                text-white text-sm py-2 rounded-lg transition font-medium">
+                    Apply Now →
+                  </a>
+                </div>
+              );
+            })}
           </div>
+
+          {/* Skeleton grid — shows INSTEAD of button while loading */}
+          {loadingMore && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[0,1,2,3,4,5].map(i => (
+                <div 
+                  key={`sk-${i}`} 
+                  style={{ 
+                    opacity: 0,
+                    animation: `cardFadeIn 0.3s ease-out ${i * 80}ms forwards` 
+                  }}
+                >
+                  <JobCardSkeleton />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Load More button — only when NOT loading and more jobs exist */}
+          {!loadingMore && result.atsScore >= 80 && !noMoreJobs && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={handleLoadMore}
+                className="px-6 py-3 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition-colors"
+              >
+                Load More Job Openings
+              </button>
+            </div>
+          )}
+
+          {/* No more jobs message */}
+          {noMoreJobs && (
+            <p className="text-center text-gray-400 py-4">
+              No more jobs found
+            </p>
+          )}
         </div>
       )}
 
