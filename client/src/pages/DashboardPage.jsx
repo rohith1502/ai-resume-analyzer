@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import ResumeAnalyzerForm from '../components/ResumeAnalyzerForm';
 import ResultsSection from '../components/ResultsSection';
 import AnalysisHistory from '../components/AnalysisHistory';
@@ -12,10 +13,15 @@ const DashboardPage = () => {
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
 
+  const { user, logout } = useAuth();
   const token = localStorage.getItem('token');
-  const userEmail = (() => {
-    try { return JSON.parse(atob(token.split('.')[1])).email || 'User'; }
-    catch { return 'User'; }
+
+  // Get user display name: prefer name, then email (without @domain), fallback to 'User'
+  const userDisplay = (() => {
+    if (!user) return 'User';
+    if (user.name) return user.name;
+    if (user.email) return user.email.split('@')[0];
+    return 'User';
   })();
 
   const fetchHistory = async () => {
@@ -78,7 +84,7 @@ const DashboardPage = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    logout();
     window.location.href = '/';
   };
 
@@ -95,7 +101,7 @@ const DashboardPage = () => {
           <span className="text-violet-300 font-bold text-xl">Resume Analyzer</span>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-gray-400 text-sm hidden md:block">{userEmail}</span>
+          <span className="text-gray-400 text-sm hidden md:block">{userDisplay}</span>
           {view !== 'form' && (
             <button
               onClick={() => { setResult(null); setView('form'); }}
