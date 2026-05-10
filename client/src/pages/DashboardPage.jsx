@@ -27,7 +27,7 @@ const DashboardPage = () => {
   const fetchHistory = async () => {
     setHistoryLoading(true);
     try {
-      const res = await axios.get('http://localhost:3000/api/resume/history', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/resume/history`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data.success) setHistory(res.data.data);
@@ -45,7 +45,7 @@ const DashboardPage = () => {
     setView('results');
     try {
       const response = await axios.post(
-        'http://localhost:3000/api/resume/analyze',
+        `${import.meta.env.VITE_API_URL}/api/resume/analyze`,
         formData,
         { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }
       );
@@ -69,7 +69,7 @@ const DashboardPage = () => {
     setLoading(true);
     setView('results');
     try {
-      const res = await axios.get(`http://localhost:3000/api/resume/history/${id}`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/resume/history/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data.success) {

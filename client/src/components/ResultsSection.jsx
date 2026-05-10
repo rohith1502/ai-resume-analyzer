@@ -18,7 +18,7 @@ const ResultsSection = ({ result, onAnalyzeAnother }) => {
     setLoadingMore(true);
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/resume/more-jobs',
+        `${import.meta.env.VITE_API_URL}/api/resume/more-jobs`,
         { jobTitle: result.jobRole, page: jobPage },
         { headers: { Authorization: `Bearer ${token}` } }
       );
